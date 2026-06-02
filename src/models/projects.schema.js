@@ -43,6 +43,10 @@ const projectSchema = new mongoose.Schema(
             type: String,
         },
 
+        dashboard: {
+            type: String,
+        },
+
         tech: [
             {
                 type: String,
