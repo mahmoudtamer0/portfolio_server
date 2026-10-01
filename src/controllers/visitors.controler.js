@@ -27,9 +27,9 @@ export const trackVisitor = async (req, res) => {
 
 export const getStats = async (req, res) => {
     try {
-        if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
-            return res.sendStatus(401);
-        }
+        // if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+        //     return res.sendStatus(401);
+        // }
 
         const total = await Visitor.countDocuments();
         const byCountry = await Visitor.aggregate([
