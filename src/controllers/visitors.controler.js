@@ -5,6 +5,11 @@ export const trackVisitor = async (req, res) => {
         const { visitorId } = req.body;
         if (!visitorId) return res.sendStatus(400);
 
+        const ua = req.headers["user-agent"] || "";
+        if (/bot|crawl|spider|headless|preview|scanner|lighthouse|curl|python|node-fetch/i.test(ua)) {
+            return res.sendStatus(204);
+        }
+
         const country = req.headers["x-vercel-ip-country"] || null;
         const rawCity = req.headers["x-vercel-ip-city"];
         const city = rawCity ? decodeURIComponent(rawCity) : null;
@@ -14,7 +19,7 @@ export const trackVisitor = async (req, res) => {
             {
                 $inc: { visits: 1 },
                 $set: { lastSeen: new Date() },
-                $setOnInsert: { country, city },
+                $setOnInsert: { country, city, userAgent: ua },
             },
             { upsert: true }
         );

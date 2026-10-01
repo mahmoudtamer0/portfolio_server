@@ -13,6 +13,7 @@ const visitorSchema = new mongoose.Schema(
             type: Number,
             default: 1,
         },
+        userAgent: String,
         lastSeen: {
             type: Date,
             default: Date.now,
