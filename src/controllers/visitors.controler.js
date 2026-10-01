@@ -31,13 +31,16 @@ export const getStats = async (req, res) => {
         //     return res.sendStatus(401);
         // }
 
-        const total = await Visitor.countDocuments();
-        const byCountry = await Visitor.aggregate([
-            { $group: { _id: "$country", count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-        ]);
+        const days = Number(req.query.days) || 0;
+        const filter = days
+            ? { lastSeen: { $gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) } }
+            : {};
 
-        res.json({ total, byCountry });
+        const visitors = await Visitor.find(filter)
+            .select("country city visits createdAt lastSeen -_id")
+            .sort({ lastSeen: -1 });
+
+        res.json({ total: visitors.length, visitors });
     } catch (err) {
         res.status(500).json({ message: "Error fetching stats" });
     }
