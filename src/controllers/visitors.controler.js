@@ -1,9 +1,20 @@
 import Visitor from "../models/visitors.schema.js";
 
+const clean = (v, max = 200) =>
+    typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
+
+const getHost = (url) => {
+    try {
+        return new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+        return null;
+    }
+};
+
 export const trackVisitor = async (req, res) => {
     try {
-        const { visitorId } = req.body;
-        if (!visitorId) return res.sendStatus(400);
+        const { visitorId, referrer, source, language, screen } = req.body;
+        if (!visitorId || typeof visitorId !== "string") return res.sendStatus(400);
 
         const ua = req.headers["user-agent"] || "";
         if (/bot|crawl|spider|headless|preview|scanner|lighthouse|curl|python|node-fetch/i.test(ua)) {
@@ -19,7 +30,15 @@ export const trackVisitor = async (req, res) => {
             {
                 $inc: { visits: 1 },
                 $set: { lastSeen: new Date() },
-                $setOnInsert: { country, city, userAgent: ua },
+                $setOnInsert: {
+                    country,
+                    city,
+                    userAgent: ua.slice(0, 300),
+                    referrer: getHost(referrer),
+                    source: clean(source, 50),
+                    language: clean(language, 20),
+                    screen: clean(screen, 20),
+                },
             },
             { upsert: true }
         );
@@ -42,7 +61,7 @@ export const getStats = async (req, res) => {
             : {};
 
         const visitors = await Visitor.find(filter)
-            .select("country city visits createdAt lastSeen -_id")
+            .select("country city visits createdAt lastSeen referrer source language screen userAgent -_id")
             .sort({ lastSeen: -1 });
 
         res.json({ total: visitors.length, visitors });

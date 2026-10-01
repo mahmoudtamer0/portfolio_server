@@ -2,22 +2,16 @@ import mongoose from "mongoose";
 
 const visitorSchema = new mongoose.Schema(
     {
-        visitorId: {
-            type: String,
-            required: true,
-            unique: true,
-        },
+        visitorId: { type: String, required: true, unique: true },
         country: String,
         city: String,
-        visits: {
-            type: Number,
-            default: 1,
-        },
+        referrer: String,
+        source: String,
+        language: String,
+        screen: String,
         userAgent: String,
-        lastSeen: {
-            type: Date,
-            default: Date.now,
-        },
+        visits: { type: Number, default: 1 },
+        lastSeen: { type: Date, default: Date.now },
     },
     { timestamps: true }
 );
