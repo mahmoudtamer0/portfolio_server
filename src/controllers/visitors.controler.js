@@ -1,4 +1,5 @@
 import Visitor from "../models/visitors.schema.js";
+import Event from "../models/events.schema.js";
 
 const clean = (v, max = 200) =>
     typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
@@ -49,6 +50,46 @@ export const trackVisitor = async (req, res) => {
     }
 };
 
+
+export const trackEvent = async (req, res) => {
+    try {
+        const { visitorId, type, meta } = req.body;
+        if (typeof visitorId !== "string" || typeof type !== "string") {
+            return res.sendStatus(400);
+        }
+
+        const ua = req.headers["user-agent"] || "";
+        if (/bot|crawl|spider|headless|preview|scanner|lighthouse|curl|python|node-fetch/i.test(ua)) {
+            return res.sendStatus(204);
+        }
+
+        const safeMeta =
+            meta && typeof meta === "object" && JSON.stringify(meta).length < 500 ? meta : {};
+
+        await Event.create({ visitorId, type: type.slice(0, 50), meta: safeMeta });
+        res.sendStatus(204);
+    } catch (err) {
+        res.sendStatus(500);
+    }
+};
+
+export const getVisitorEvents = async (req, res) => {
+    try {
+        // if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
+        //     return res.sendStatus(401);
+        // }
+
+        const events = await Event.find({ visitorId: req.params.visitorId })
+            .select("type meta createdAt -_id")
+            .sort({ createdAt: 1 })
+            .lean();
+
+        res.json({ events });
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching events" });
+    }
+};
+
 export const getStats = async (req, res) => {
     try {
         // if (req.headers["x-admin-key"] !== process.env.ADMIN_KEY) {
@@ -61,10 +102,20 @@ export const getStats = async (req, res) => {
             : {};
 
         const visitors = await Visitor.find(filter)
-            .select("country city visits createdAt lastSeen referrer source language screen userAgent -_id")
-            .sort({ lastSeen: -1 });
+            .select("visitorId country city visits createdAt lastSeen referrer source language screen userAgent -_id")
+            .sort({ lastSeen: -1 })
+            .lean();
 
-        res.json({ total: visitors.length, visitors });
+        const counts = await Event.aggregate([
+            { $match: { visitorId: { $in: visitors.map((v) => v.visitorId) } } },
+            { $group: { _id: "$visitorId", count: { $sum: 1 } } },
+        ]);
+        const countMap = Object.fromEntries(counts.map((c) => [c._id, c.count]));
+
+        res.json({
+            total: visitors.length,
+            visitors: visitors.map((v) => ({ ...v, actions: countMap[v.visitorId] || 0 })),
+        });
     } catch (err) {
         res.status(500).json({ message: "Error fetching stats" });
     }

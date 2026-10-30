@@ -4,8 +4,6 @@ package-lock.json
 yarn.lock
 
 # Environment variables
-.env
-.env.local
 # Logs
 logs
 *.log
@@ -32,7 +30,6 @@ uploads/
 .DS_Store
 Thumbs.db
 # Editor files
-.vscode/
 .idea/
 
 # Debug
